@@ -28,6 +28,7 @@
 
 // Required Libraries.
 #include <LiquidCrystal.h>
+#include <EEPROM.h>
 
 // Constants > Settings.
 const String projectVersion          = "2.0.1";     //the version string to track changes.
@@ -58,6 +59,19 @@ const byte   outLCDD5Pin             =  6;  //atmega pin 12 / lcd pin 12
 const byte   outLCDD6Pin             =  7;  //atmega pin 13 / lcd pin 13
 const byte   outLCDD7Pin             =  8;  //atmega pin 14 / lcd pin 14
 
+// Constants > EEPROM addresses.
+const int    intSize                 = sizeof(int);
+const byte   memN1                   = intSize * 0;
+const byte   memN1History            = intSize * 1;
+const byte   memN2                   = intSize * 2;
+const byte   memN2History            = intSize * 3;
+const byte   memP5                   = intSize * 4;
+const byte   memP5History            = intSize * 5;
+const byte   memP10                  = intSize * 6;
+const byte   memP10History           = intSize * 7;
+const byte   memP20                  = intSize * 8;
+const byte   memP20History           = intSize * 9;
+
 // Global Variables.
 unsigned long curTime                = 0;
 bool          isRoomDark             = false;
@@ -70,13 +84,13 @@ String        incrementDetectBtn     = String("");
 unsigned long resetDetectTime        = 0;
 
 // Global Variables > Totals.
-int           totalN1                = 1;
-int           totalN1History         = 9;
-int           totalN2                = 27;
-int           totalN2History         = 382;
-int           totalP5                = 48;
-int           totalP5History         = 101;
-int           totalP10               = 1;
+int           totalN1                = 0;
+int           totalN1History         = 0;
+int           totalN2                = 0;
+int           totalN2History         = 0;
+int           totalP5                = 0;
+int           totalP5History         = 0;
+int           totalP10               = 0;
 int           totalP10History        = 0;
 int           totalP20               = 0;
 int           totalP20History        = 0;
@@ -138,6 +152,9 @@ void setup () {
   // Debugging.
   Serial.begin(9600);
 
+  // Read EEPROM.
+  memLoadStoredTotals();
+
   // Change the mode.
   setMode("startup", "");
 
@@ -197,6 +214,9 @@ void loop () {
       else if (incrementDetectBtn == "P10") { totalP10++; }
       else if (incrementDetectBtn == "P20") { totalP20++; }
 
+      // Save to EEPROM.
+      memWriteTotal(incrementDetectBtn);
+
       tone(outPiezoPin, toneIncrement, 400);
       
       setMode("status", "Incremented!");
@@ -234,6 +254,9 @@ void loop () {
       totalP5         = 0;
       totalP10        = 0;
       totalP20        = 0;
+
+      // Update the values stored in memory.
+      memMoveToHistory();
 
       tone(outPiezoPin, toneReset, 800);
 
@@ -546,5 +569,92 @@ void deactivateLCDBacklight () {
     digitalWrite(outLCDBacklightPin, LOW);
     isLCDBacklightOn = false;
   }
+}
+
+/*
+ * Reads in all the stored totals from the EEPROM.
+ */
+void memLoadStoredTotals () {
+
+  int tmpN1;
+  EEPROM.get(memN1, tmpN1);
+  if (tmpN1 > -1) { totalN1 = tmpN1; }
+
+  int tmpN1History;
+  EEPROM.get(memN1History, tmpN1History);
+  if (tmpN1History > -1) { totalN1History = tmpN1History; }
+
+  int tmpN2;
+  EEPROM.get(memN2, tmpN2);
+  if (tmpN2 > -1) { totalN2 = tmpN2; }
+
+  int tmpN2History;
+  EEPROM.get(memN2History, tmpN2History);
+  if (tmpN2History > -1) { totalN2History = tmpN2History; }
+
+  int tmpP5;
+  EEPROM.get(memP5, tmpP5);
+  if (tmpP5 > -1) { totalP5 = tmpP5; }
+
+  int tmpP5History;
+  EEPROM.get(memP5History, tmpP5History);
+  if (tmpP5History > -1) { totalP5History = tmpP5History; }
+
+  int tmpP10;
+  EEPROM.get(memP10, tmpP10);
+  if (tmpP10 > -1) { totalP10 = tmpP10; }
+
+  int tmpP10History;
+  EEPROM.get(memP10History, tmpP10History);
+  if (tmpP10History > -1) { totalP10History = tmpP10History; }
+
+  int tmpP20;
+  EEPROM.get(memP20, tmpP20);
+  if (tmpP20 > -1) { totalP20 = tmpP20; }
+
+  int tmpP20History;
+  EEPROM.get(memP20History, tmpP20History);
+  if (tmpP20History > -1) { totalP20History = tmpP20History; }
+
+  //Serial.print("XXX: ");
+  //Serial.println(XXX);
+  
+}
+
+/*
+ * Writes the given total to the EEPROM.
+ */
+void memWriteTotal (String which) {
+
+  byte memAddr;
+  int  value;
+
+  if      (which == "N1")  { memAddr = memN1;  value = totalN1;  }
+  else if (which == "N2")  { memAddr = memN2;  value = totalN2;  }
+  else if (which == "P5")  { memAddr = memP5;  value = totalP5;  }
+  else if (which == "P10") { memAddr = memP10; value = totalP10; }
+  else if (which == "P20") { memAddr = memP20; value = totalP20; }
+
+  EEPROM.put(memAddr, value);
+  
+}
+
+/*
+ * Writes the new history totals to the EEPROM and zeroes the current totals.
+ */
+void memMoveToHistory () {
+
+  EEPROM.put(memN1,         totalN1);
+  EEPROM.put(memN2,         totalN2);
+  EEPROM.put(memP5,         totalP5);
+  EEPROM.put(memP10,        totalP10);
+  EEPROM.put(memP20,        totalP20);
+  
+  EEPROM.put(memN1History,  totalN1History);
+  EEPROM.put(memN2History,  totalN2History);
+  EEPROM.put(memP5History,  totalP5History);
+  EEPROM.put(memP10History, totalP10History);
+  EEPROM.put(memP20History, totalP20History);
+  
 }
 
