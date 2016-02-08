@@ -31,7 +31,7 @@
 #include <EEPROM.h>
 
 // Constants > Settings.
-const String projectVersion          = "2.0.1";     //the version string to track changes.
+const String projectVersion          = "2.1.0";     //the version string to track changes.
 const int    startupWaitMS           = 5000;        //the time to show the startup message if no buttons are pressed.
 const int    incrementWaitMS         = 1000;        //the time to show the increment progress bar before increasing the chosen total.
 const int    resetWaitMS             = 3000;        //the time to show the reset progress bar before resetting the current totals.
